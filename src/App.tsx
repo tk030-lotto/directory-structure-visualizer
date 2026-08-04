@@ -5,11 +5,12 @@ import { Controls } from './components/Controls';
 import { TreeViewer } from './components/TreeViewer';
 import { ExportPanel } from './components/ExportPanel';
 import { DirectoryNode, ScannerOptions, MarkdownOptions } from './types';
-import { parseFileList, DEFAULT_SCANNER_OPTIONS } from './services/scanner';
+import { parseFileList, parseFileSystemEntries, DEFAULT_SCANNER_OPTIONS } from './services/scanner';
 import { generateMarkdownTree } from './utils/markdownGenerator';
 
 export const App: React.FC = () => {
   const [rawFiles, setRawFiles] = useState<FileList | File[] | null>(null);
+  const [rawEntries, setRawEntries] = useState<any[] | null>(null);
   const [scannerOptions, setScannerOptions] = useState<ScannerOptions>(DEFAULT_SCANNER_OPTIONS);
   const [markdownOptions, setMarkdownOptions] = useState<MarkdownOptions>({
     style: 'unicode',
@@ -18,23 +19,41 @@ export const App: React.FC = () => {
 
   const [treeNode, setTreeNode] = useState<DirectoryNode | null>(null);
 
-  // ファイルリストまたはオプションが変更されたらツリーを再生成
+  // ファイルリストまたはエントリまたはオプションが変更されたらツリーを非同期/同期で再生成
   useEffect(() => {
-    if (rawFiles && rawFiles.length > 0) {
-      const parsed = parseFileList(rawFiles, scannerOptions);
-      setTreeNode(parsed);
-    } else {
-      setTreeNode(null);
-    }
-  }, [rawFiles, scannerOptions]);
+    let isSubscribed = true;
 
-  // Markdownテキストをメモリ計算
+    async function updateTree() {
+      if (rawEntries && rawEntries.length > 0) {
+        const parsed = await parseFileSystemEntries(rawEntries, scannerOptions);
+        if (isSubscribed) setTreeNode(parsed);
+      } else if (rawFiles && rawFiles.length > 0) {
+        const parsed = parseFileList(rawFiles, scannerOptions);
+        if (isSubscribed) setTreeNode(parsed);
+      } else {
+        if (isSubscribed) setTreeNode(null);
+      }
+    }
+
+    updateTree();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [rawFiles, rawEntries, scannerOptions]);
+
   const markdownText = useMemo(() => {
     return generateMarkdownTree(treeNode, markdownOptions);
   }, [treeNode, markdownOptions]);
 
   const handleFilesSelected = (files: FileList | File[]) => {
+    setRawEntries(null);
     setRawFiles(files);
+  };
+
+  const handleEntriesSelected = (entries: any[]) => {
+    setRawFiles(null);
+    setRawEntries(entries);
   };
 
   return (
@@ -43,6 +62,7 @@ export const App: React.FC = () => {
 
       <FilePicker
         onFilesSelected={handleFilesSelected}
+        onEntriesSelected={handleEntriesSelected}
         folderName={treeNode ? treeNode.name : null}
         fileCount={treeNode ? (treeNode.fileCount || 0) + (treeNode.dirCount || 0) : 0}
       />

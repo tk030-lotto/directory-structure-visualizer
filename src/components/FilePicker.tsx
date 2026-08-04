@@ -3,11 +3,17 @@ import { FolderPlus, UploadCloud, FolderCheck } from 'lucide-react';
 
 interface FilePickerProps {
   onFilesSelected: (files: FileList | File[]) => void;
+  onEntriesSelected?: (entries: any[]) => void;
   folderName: string | null;
   fileCount: number;
 }
 
-export const FilePicker: React.FC<FilePickerProps> = ({ onFilesSelected, folderName, fileCount }) => {
+export const FilePicker: React.FC<FilePickerProps> = ({
+  onFilesSelected,
+  onEntriesSelected,
+  folderName,
+  fileCount
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -35,6 +41,24 @@ export const FilePicker: React.FC<FilePickerProps> = ({ onFilesSelected, folderN
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
+
+    const items = e.dataTransfer.items;
+    if (items && items.length > 0) {
+      const entries: any[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file') {
+          const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+          if (entry) {
+            entries.push(entry);
+          }
+        }
+      }
+      if (entries.length > 0 && onEntriesSelected) {
+        onEntriesSelected(entries);
+        return;
+      }
+    }
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       onFilesSelected(e.dataTransfer.files);

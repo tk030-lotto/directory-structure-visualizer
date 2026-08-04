@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Folder, FolderOpen, FileText, ChevronRight, ChevronDown, Binary } from 'lucide-react';
+import { Folder, FolderOpen, FileText, ChevronRight, ChevronDown, Binary, AlertCircle } from 'lucide-react';
 import { DirectoryNode } from '../types';
 
 interface TreeViewerProps {
@@ -8,6 +8,8 @@ interface TreeViewerProps {
 
 export const TreeViewer: React.FC<TreeViewerProps> = ({ rootNode }) => {
   if (!rootNode) return null;
+
+  const hasChildren = rootNode.children && rootNode.children.length > 0;
 
   return (
     <div className="glass-panel" style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -24,7 +26,19 @@ export const TreeViewer: React.FC<TreeViewerProps> = ({ rootNode }) => {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', maxHeight: '420px', fontFamily: 'var(--font-mono)', fontSize: '0.875rem' }}>
-        <TreeNodeItem node={rootNode} defaultExpanded={true} level={0} />
+        {hasChildren ? (
+          <TreeNodeItem node={rootNode} defaultExpanded={true} level={0} />
+        ) : (
+          <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <AlertCircle size={32} color="var(--accent-primary)" style={{ marginBottom: '8px' }} />
+            <p style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-main)' }}>
+              表示可能なファイルが存在しません
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '4px' }}>
+              選択されたフォルダが空か、または除外フィルターによってすべてスキップされています。
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -12,7 +12,18 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ markdownText, rootName
   const handleCopy = async () => {
     if (!markdownText) return;
     try {
-      await navigator.clipboard.writeText(markdownText);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(markdownText);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = markdownText;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {

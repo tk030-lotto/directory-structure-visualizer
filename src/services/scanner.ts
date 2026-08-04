@@ -41,14 +41,129 @@ export function isExcluded(name: string, path: string, patterns: string[]): bool
 }
 
 /**
- * HTML FileList (input webkitdirectory で選択されたファイル郡) からツリーを構築
+ * FileSystemEntry (ドラッグ＆ドロップ時の webkitGetAsEntry) からツリー構造を非同期で走査・構築
+ */
+export async function parseFileSystemEntries(
+  entries: any[],
+  options: ScannerOptions
+): Promise<DirectoryNode | null> {
+  if (!entries || entries.length === 0) return null;
+
+  const rootEntry = entries[0];
+  const rootName = rootEntry.name || 'root';
+
+  const root: DirectoryNode = {
+    id: 'root',
+    name: rootName,
+    path: rootName,
+    kind: rootEntry.isDirectory ? 'directory' : 'file',
+    children: [],
+    fileCount: 0,
+    dirCount: 0,
+    size: 0
+  };
+
+  if (rootEntry.isDirectory) {
+    await scanEntry(rootEntry, root, rootName, options, 1);
+  } else {
+    const file = await getFileFromEntry(rootEntry);
+    root.size = file ? file.size : 0;
+    root.fileCount = 1;
+  }
+
+  sortAndStatsTree(root);
+  return root;
+}
+
+async function scanEntry(
+  entry: any,
+  parentNode: DirectoryNode,
+  currentPath: string,
+  options: ScannerOptions,
+  currentDepth: number
+) {
+  if (options.maxDepth > 0 && currentDepth > options.maxDepth) return;
+  if (!entry.isDirectory) return;
+
+  const dirReader = entry.createReader();
+  const entries = await readAllEntries(dirReader);
+
+  for (const childEntry of entries) {
+    const childName = childEntry.name;
+    const childPath = `${currentPath}/${childName}`;
+
+    // 隠しファイルチェック
+    if (!options.showHidden && childName.startsWith('.') && childName !== '.' && childName !== '..') {
+      continue;
+    }
+
+    // 除外チェック
+    if (isExcluded(childName, childPath, options.excludePatterns)) {
+      continue;
+    }
+
+    if (!parentNode.children) {
+      parentNode.children = [];
+    }
+
+    if (childEntry.isDirectory) {
+      const dirNode: DirectoryNode = {
+        id: `${childPath}-d`,
+        name: childName,
+        path: childPath,
+        kind: 'directory',
+        children: [],
+        fileCount: 0,
+        dirCount: 0,
+        size: 0
+      };
+      parentNode.children.push(dirNode);
+      await scanEntry(childEntry, dirNode, childPath, options, currentDepth + 1);
+    } else if (childEntry.isFile && options.includeFiles) {
+      const file = await getFileFromEntry(childEntry);
+      const fileNode: DirectoryNode = {
+        id: `${childPath}-f`,
+        name: childName,
+        path: childPath,
+        kind: 'file',
+        size: file ? file.size : 0
+      };
+      parentNode.children.push(fileNode);
+    }
+  }
+}
+
+function readAllEntries(dirReader: any): Promise<any[]> {
+  return new Promise((resolve) => {
+    let entries: any[] = [];
+    const read = () => {
+      dirReader.readEntries((batch: any[]) => {
+        if (batch.length === 0) {
+          resolve(entries);
+        } else {
+          entries = entries.concat(batch);
+          read();
+        }
+      }, () => resolve(entries));
+    };
+    read();
+  });
+}
+
+function getFileFromEntry(fileEntry: any): Promise<File | null> {
+  return new Promise((resolve) => {
+    fileEntry.file((file: File) => resolve(file), () => resolve(null));
+  });
+}
+
+/**
+ * HTML FileList (input webkitdirectory で選択されたファイル群) からツリーを構築
  */
 export function parseFileList(files: FileList | File[], options: ScannerOptions): DirectoryNode | null {
   if (!files || files.length === 0) return null;
 
   const fileArray = Array.from(files);
-  // webkitRelativePath 例: "my-project/src/components/Header.tsx"
-  const rootName = fileArray[0].webkitRelativePath.split('/')[0] || 'root';
+  const rootName = fileArray[0].webkitRelativePath ? fileArray[0].webkitRelativePath.split('/')[0] : (fileArray[0].name || 'root');
 
   const root: DirectoryNode = {
     id: 'root',
@@ -65,7 +180,6 @@ export function parseFileList(files: FileList | File[], options: ScannerOptions)
     const relativePath = file.webkitRelativePath || file.name;
     const parts = relativePath.split('/');
     
-    // スキップ判定（隠しファイル）
     if (!options.showHidden && parts.some(part => part.startsWith('.') && part !== '.' && part !== '..')) {
       return;
     }
@@ -73,17 +187,15 @@ export function parseFileList(files: FileList | File[], options: ScannerOptions)
     let current = root;
     let currentPath = rootName;
 
-    for (let i = 1; i < parts.length; i++) {
+    for (let i = (file.webkitRelativePath ? 1 : 0); i < parts.length; i++) {
       const part = parts[i];
       const isFile = i === parts.length - 1;
       currentPath = `${currentPath}/${part}`;
 
-      // 深度制限チェック
       if (options.maxDepth > 0 && i > options.maxDepth) {
         break;
       }
 
-      // 除外判定
       if (isExcluded(part, currentPath, options.excludePatterns)) {
         break;
       }
@@ -116,9 +228,7 @@ export function parseFileList(files: FileList | File[], options: ScannerOptions)
     }
   });
 
-  // ツリーの統計情報と並び替え (ディレクトリ優先、名前順)
   sortAndStatsTree(root);
-
   return root;
 }
 
@@ -134,7 +244,6 @@ export function sortAndStatsTree(node: DirectoryNode): { files: number; dirs: nu
   let totalDirs = 0;
 
   if (node.children) {
-    // ディレクトリを上に、ファイルを下にソート
     node.children.sort((a, b) => {
       if (a.kind !== b.kind) {
         return a.kind === 'directory' ? -1 : 1;
