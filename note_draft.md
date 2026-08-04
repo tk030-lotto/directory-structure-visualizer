@@ -1,6 +1,6 @@
 # ChatGPTやClaudeへの説明に便利。ディレクトリ構造をMarkdownツリー化するWebツール
 
-🌐 **GitHub Pages (Webアプリ版)**: [GitHub PagesのURLをここに記載]
+🌐 **GitHub Pages (Webアプリ版)**: https://tk030-lotto.github.io/directory-structure-visualizer/
 
 ---
 
@@ -38,7 +38,7 @@ ChatGPTやClaudeなどの生成AIにプログラミングの相談をする際�
 
 ## 🔗 リンクとリポジトリ
 
-- 🌐 **Webで試す (GitHub Pages)**: [GitHub PagesのURLをここに記載]
-- 🐙 **GitHub リポジトリ**: [GitHubリポジトリのURLをここに記載]
+- 🌐 **Webで試す (GitHub Pages)**: https://tk030-lotto.github.io/directory-structure-visualizer/
+- 🐙 **GitHub リポジトリ**: https://github.com/tk030-lotto/directory-structure-visualizer
 
 #プログラミング #ChatGPT #Claude #Web開発 #個人開発 #エンジニア #React #TypeScript #便利ツール
