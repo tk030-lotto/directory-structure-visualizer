@@ -4,6 +4,7 @@ import { FilePicker } from './components/FilePicker';
 import { Controls } from './components/Controls';
 import { TreeViewer } from './components/TreeViewer';
 import { ExportPanel } from './components/ExportPanel';
+import { Footer } from './components/Footer';
 import { DirectoryNode, ScannerOptions, MarkdownOptions } from './types';
 import { parseFileList, parseFileSystemEntries, DEFAULT_SCANNER_OPTIONS } from './services/scanner';
 import { generateMarkdownTree } from './utils/markdownGenerator';
@@ -80,6 +81,8 @@ export const App: React.FC = () => {
           <ExportPanel markdownText={markdownText} rootName={treeNode.name} />
         </div>
       )}
+
+      <Footer />
     </div>
   );
 };
