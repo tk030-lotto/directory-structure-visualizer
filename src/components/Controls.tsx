@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SlidersHorizontal, Eye, EyeOff, Layers, FileCode } from 'lucide-react';
 import { ScannerOptions, MarkdownOptions, TreeStyle } from '../types';
 
@@ -17,6 +17,11 @@ export const Controls: React.FC<ControlsProps> = ({
 }) => {
   const [excludeInput, setExcludeInput] = useState(scannerOptions.excludePatterns.join(', '));
 
+  // Bug3: scannerOptions が外部から変更された場合（将来のリセット機能等）に追従させる
+  useEffect(() => {
+    setExcludeInput(scannerOptions.excludePatterns.join(', '));
+  }, [scannerOptions.excludePatterns]);
+
   const handleExcludeBlur = () => {
     const patterns = excludeInput
       .split(',')
@@ -34,9 +39,11 @@ export const Controls: React.FC<ControlsProps> = ({
         </h3>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-        {/* 除外パターン設定 */}
-        <div style={{ gridColumn: 'span 2' }}>
+      {/* Bug8: span 2 によるレスポンシブ崩壊を防ぐため
+          フレックスカラムレイアウトに変更し、全幅要素は自然に全幅を占める構造に変更 */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* 除外パターン設定 — 常に全幅 */}
+        <div>
           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>
             除外フォルダ・ファイル (カンマ区切り)
           </label>
@@ -51,42 +58,45 @@ export const Controls: React.FC<ControlsProps> = ({
           />
         </div>
 
-        {/* 階層深度設定 */}
-        <div>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>
-            <Layers size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-            最大階層深度 (0 = 無制限)
-          </label>
-          <input
-            type="number"
-            className="input-text"
-            style={{ width: '100%' }}
-            min={0}
-            max={20}
-            value={scannerOptions.maxDepth}
-            onChange={(e) => onScannerChange({ ...scannerOptions, maxDepth: parseInt(e.target.value, 10) || 0 })}
-          />
+        {/* 数値・セレクト入力群 — 2カラムグリッド（幅が小さいと自動で 1 列に折りたたみ） */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          {/* 階層深度設定 */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>
+              <Layers size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+              最大階層深度 (0 = 無制限)
+            </label>
+            <input
+              type="number"
+              className="input-text"
+              style={{ width: '100%' }}
+              min={0}
+              max={20}
+              value={scannerOptions.maxDepth}
+              onChange={(e) => onScannerChange({ ...scannerOptions, maxDepth: parseInt(e.target.value, 10) || 0 })}
+            />
+          </div>
+
+          {/* ツリー形式設定 */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>
+              <FileCode size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+              ツリー記号スタイル
+            </label>
+            <select
+              className="input-text"
+              style={{ width: '100%', cursor: 'pointer' }}
+              value={markdownOptions.style}
+              onChange={(e) => onMarkdownChange({ ...markdownOptions, style: e.target.value as TreeStyle })}
+            >
+              <option value="unicode">Unicode (├──, └──)</option>
+              <option value="ascii">ASCII (|--, \\--)</option>
+            </select>
+          </div>
         </div>
 
-        {/* ツリー形式設定 */}
-        <div>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>
-            <FileCode size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-            ツリー記号スタイル
-          </label>
-          <select
-            className="input-text"
-            style={{ width: '100%', cursor: 'pointer' }}
-            value={markdownOptions.style}
-            onChange={(e) => onMarkdownChange({ ...markdownOptions, style: e.target.value as TreeStyle })}
-          >
-            <option value="unicode">Unicode (├──, └──)</option>
-            <option value="ascii">ASCII (|--, \--)</option>
-          </select>
-        </div>
-
-        {/* トグル設定群 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', gridColumn: 'span 2', marginTop: '8px' }}>
+        {/* トグル設定群 — 常に全幅 */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--text-main)' }}>
             <input
               type="checkbox"

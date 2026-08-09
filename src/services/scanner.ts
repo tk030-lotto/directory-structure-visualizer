@@ -65,7 +65,8 @@ export async function parseFileSystemEntries(
 
   if (rootEntry.isDirectory) {
     await scanEntry(rootEntry, root, rootName, options, 1);
-  } else {
+  } else if (options.includeFiles) {
+    // Bug5: includeFiles が false のときは単体ファイルのドロップも無視する
     const file = await getFileFromEntry(rootEntry);
     root.size = file ? file.size : 0;
     root.fileCount = 1;
@@ -144,7 +145,11 @@ function readAllEntries(dirReader: any): Promise<any[]> {
           entries = entries.concat(batch);
           read();
         }
-      }, () => resolve(entries));
+      }, (err: unknown) => {
+        // Bug4: エラー時も途中まで読んだ結果で resolve（サイレント失敗を防ぐためログ出力）
+        console.warn('[scanner] readEntries failed, partial results returned:', err);
+        resolve(entries);
+      });
     };
     read();
   });
@@ -163,7 +168,11 @@ export function parseFileList(files: FileList | File[], options: ScannerOptions)
   if (!files || files.length === 0) return null;
 
   const fileArray = Array.from(files);
-  const rootName = fileArray[0].webkitRelativePath ? fileArray[0].webkitRelativePath.split('/')[0] : (fileArray[0].name || 'root');
+  // Bug6: webkitRelativePath が空文字の場合も falsy として扱う
+  const rawRelativePath = fileArray[0].webkitRelativePath;
+  const rootName = rawRelativePath && rawRelativePath.length > 0
+    ? rawRelativePath.split('/')[0]
+    : (fileArray[0].name || 'root');
 
   const root: DirectoryNode = {
     id: 'root',
@@ -187,12 +196,16 @@ export function parseFileList(files: FileList | File[], options: ScannerOptions)
     let current = root;
     let currentPath = rootName;
 
-    for (let i = (file.webkitRelativePath ? 1 : 0); i < parts.length; i++) {
+    // Bug2: webkitRelativePath がある場合は先頭のルート名分 (index=0) をスキップして i=1 開始
+    // depth は startIndex からの相対値（1 始まり）で計算し maxDepth と比較する
+    const startIndex = file.webkitRelativePath && file.webkitRelativePath.length > 0 ? 1 : 0;
+    for (let i = startIndex; i < parts.length; i++) {
       const part = parts[i];
       const isFile = i === parts.length - 1;
       currentPath = `${currentPath}/${part}`;
 
-      if (options.maxDepth > 0 && i > options.maxDepth) {
+      const depth = i - startIndex + 1;
+      if (options.maxDepth > 0 && depth > options.maxDepth) {
         break;
       }
 

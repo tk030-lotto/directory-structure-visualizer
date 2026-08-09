@@ -15,6 +15,8 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ markdownText, rootName
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(markdownText);
       } else {
+        // Issue9: execCommand は非推奨 (deprecated) だが、navigator.clipboard が
+        // 使えない古いブラウザ向けのフォールバックとして残している
         const textarea = document.createElement('textarea');
         textarea.value = markdownText;
         textarea.style.position = 'fixed';

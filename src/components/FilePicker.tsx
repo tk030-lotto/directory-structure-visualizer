@@ -5,17 +5,22 @@ interface FilePickerProps {
   onFilesSelected: (files: FileList | File[]) => void;
   onEntriesSelected?: (entries: any[]) => void;
   folderName: string | null;
+  // Bug7: ファイル数とディレクトリ数を分離して受け取る
   fileCount: number;
+  dirCount: number;
 }
 
 export const FilePicker: React.FC<FilePickerProps> = ({
   onFilesSelected,
   onEntriesSelected,
   folderName,
-  fileCount
+  fileCount,
+  dirCount
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  // Issue10: ファイル単体ドロップ時のエラーメッセージを保持
+  const [dropError, setDropError] = useState<string | null>(null);
 
   const handleFolderButtonClick = () => {
     if (fileInputRef.current) {
@@ -24,6 +29,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDropError(null);
     if (e.target.files && e.target.files.length > 0) {
       onFilesSelected(e.target.files);
     }
@@ -41,6 +47,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
+    setDropError(null);
 
     const items = e.dataTransfer.items;
     if (items && items.length > 0) {
@@ -54,9 +61,17 @@ export const FilePicker: React.FC<FilePickerProps> = ({
           }
         }
       }
-      if (entries.length > 0 && onEntriesSelected) {
-        onEntriesSelected(entries);
-        return;
+      if (entries.length > 0) {
+        // Issue10: ディレクトリが 1 つも含まれていない場合はエラーを表示
+        const hasDirectory = entries.some((entry) => entry.isDirectory);
+        if (!hasDirectory) {
+          setDropError('フォルダをドロップしてください。単体ファイルには対応していません。');
+          return;
+        }
+        if (onEntriesSelected) {
+          onEntriesSelected(entries);
+          return;
+        }
       }
     }
 
@@ -109,8 +124,9 @@ export const FilePicker: React.FC<FilePickerProps> = ({
             <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
               {folderName}
             </h3>
+            {/* Bug7: ファイル数とフォルダ数を分逆して表示 */}
             <p style={{ color: 'var(--accent-emerald)', fontSize: '0.875rem', fontWeight: 500 }}>
-              {fileCount} 件の要素をスキャン・解析完了
+              {dirCount} フォルダ / {fileCount} ファイル をスキャン完了
             </p>
             <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem', marginTop: '8px' }}>
               クリックまたは新しいフォルダをドロップして再選択
@@ -124,6 +140,20 @@ export const FilePicker: React.FC<FilePickerProps> = ({
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '16px' }}>
               ローカルマシン上のフォルダ構造を読み込んで即時にツリー表現を生成します
             </p>
+            {/* Issue10: ファイル単体ドロップ時のエラー表示 */}
+            {dropError && (
+              <p style={{
+                color: '#f87171',
+                fontSize: '0.8rem',
+                marginBottom: '10px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '6px',
+                padding: '6px 12px'
+              }}>
+                ⚠️ {dropError}
+              </p>
+            )}
             <button type="button" className="btn btn-primary" onClick={(e) => { e.stopPropagation(); handleFolderButtonClick(); }}>
               <FolderPlus size={18} />
               フォルダを選択

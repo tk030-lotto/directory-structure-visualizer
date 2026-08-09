@@ -21,6 +21,8 @@ export const App: React.FC = () => {
   const [treeNode, setTreeNode] = useState<DirectoryNode | null>(null);
 
   // ファイルリストまたはエントリまたはオプションが変更されたらツリーを非同期/同期で再生成
+  // Issue12: React 18 StrictMode では開発環境でのみ useEffect が 2 回実行される。
+  // isSubscribed フラグで 2 回目の古い結果を破棄しているため動作は正常。
   useEffect(() => {
     let isSubscribed = true;
 
@@ -65,7 +67,8 @@ export const App: React.FC = () => {
         onFilesSelected={handleFilesSelected}
         onEntriesSelected={handleEntriesSelected}
         folderName={treeNode ? treeNode.name : null}
-        fileCount={treeNode ? (treeNode.fileCount || 0) + (treeNode.dirCount || 0) : 0}
+        fileCount={treeNode ? (treeNode.fileCount || 0) : 0}
+        dirCount={treeNode ? (treeNode.dirCount || 0) : 0}
       />
 
       <Controls

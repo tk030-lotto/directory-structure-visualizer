@@ -61,7 +61,8 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, defaultExpanded = fal
   };
 
   return (
-    <div style={{ marginLeft: `${level * 16}px`, margin: '2px 0' }}>
+    // Bug1 fix: margin ショートハンドが marginLeft を上書きするため marginTop/marginBottom に分離
+    <div style={{ marginLeft: `${level * 16}px`, marginTop: '2px', marginBottom: '2px' }}>
       <div
         onClick={toggleExpand}
         style={{
