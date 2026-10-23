@@ -25,7 +25,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-
 # Internal operational files (Common Rules)
 AI_RULES.md
 SKILLS.md
@@ -45,4 +44,6 @@ GEMINI.md
 
 # 開発ドキュメント除外（フェーズ2-B）
 工程管理表.md
-`n# 仕様書除外（フェーズ2-C-β）`nSPECIFICATION*.md
+
+# 仕様書除外（フェーズ2-C-β）
+SPECIFICATION*.md
